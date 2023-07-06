@@ -1,0 +1,4 @@
+.history
+*.out
+server
+p2p-server.code-workspace
