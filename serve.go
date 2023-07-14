@@ -36,11 +36,29 @@ func fromMemory(byteData []byte) (*metainfo.MetaInfo, error) {
 	}
 	mi.SetDefaults()
 	mi.InfoBytes = bencode.MustMarshal(info)
+	// tracker也应该是可以配置的,不应该固定
 	mi.Announce = Trackers[0][0]
 	mi.AnnounceList = Trackers
 
 	return &mi, nil
 }
+
+func fromTMPFSFilePath(filePath string) (*metainfo.MetaInfo, error) {
+	mi := metainfo.MetaInfo{}
+	info := metainfo.Info{}
+	err := info.BuildFromFilePath(filePath)
+	if err != nil {
+		return nil, err
+	}
+	mi.SetDefaults()
+	mi.InfoBytes = bencode.MustMarshal(info)
+	// tracker也应该是可以配置的,不应该固定
+	mi.Announce = Trackers[0][0]
+	mi.AnnounceList = Trackers
+
+	return &mi, nil
+}
+
 func infoBytesToInfo(infoBytes []byte) (*metainfo.Info, error) {
 	info := &metainfo.Info{}
 	err := bencode.Unmarshal(infoBytes, info)
@@ -48,7 +66,6 @@ func infoBytesToInfo(infoBytes []byte) (*metainfo.Info, error) {
 		return nil, err
 	}
 	return info, nil
-
 }
 
 func seed(mi *metainfo.MetaInfo, mbp *storage.MemoryBuf) (err error) {
@@ -65,8 +82,8 @@ func seed(mi *metainfo.MetaInfo, mbp *storage.MemoryBuf) (err error) {
 	if err != nil {
 		return fmt.Errorf("NewMemory storage %w", err)
 	}
-
 	clientConfig.DefaultStorage = storageImplCloser
+
 	client, err := torrent.NewClient(clientConfig)
 	if err != nil {
 		return fmt.Errorf("NewClient %w", err)
