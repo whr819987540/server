@@ -7,3 +7,4 @@ p2p-server.code-workspace
 .torrent.db-shm
 .torrent.db-wal
 torrent/
+config.jsonc
