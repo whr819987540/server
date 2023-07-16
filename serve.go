@@ -3,14 +3,16 @@ package main
 import (
 	// "bytes"
 	"fmt"
+	"net/http"
 	// "io/ioutil"
 	// "net/http"
 	"constvalue"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/bradfitz/iter"
 	"os"
 	"path/filepath"
+
+	"github.com/bradfitz/iter"
 
 	"github.com/anacrolix/log"
 
@@ -25,6 +27,11 @@ var Trackers = [][]string{
 	{"udp://tracker.openbittorrent.com:6969/announce"},
 	{"udp://tracker.moeking.me:6969/announce"},
 	{"udp://p4p.arenabg.com:1337/announce"},
+	{`wss://tracker.btorrent.xyz`},
+	{`wss://tracker.openwebtorrent.com`},
+	{"udp://tracker.opentrackr.org:1337/announce"},
+	{"udp://tracker.openbittorrent.com:6969/announce"},
+	{"udp://47.109.111.117:6969/annouce"}, // chihaya
 }
 
 func fromMemory(byteData []byte) (*metainfo.MetaInfo, error) {
@@ -43,13 +50,19 @@ func fromMemory(byteData []byte) (*metainfo.MetaInfo, error) {
 	return &mi, nil
 }
 
-func fromTMPFSFilePath(filePath string) (*metainfo.MetaInfo, error) {
-	mi := metainfo.MetaInfo{}
+func fromTMPFS(filePath string) (*metainfo.MetaInfo, error) {
+	// 1) get the Info which describes the filePath
+	// 2) get the MetaInfo with all fields set
+
+	// Info
 	info := metainfo.Info{}
 	err := info.BuildFromFilePath(filePath)
 	if err != nil {
 		return nil, err
 	}
+
+	// MetaInfo
+	mi := metainfo.MetaInfo{}
 	mi.SetDefaults()
 	mi.InfoBytes = bencode.MustMarshal(info)
 	// tracker也应该是可以配置的,不应该固定
@@ -95,6 +108,161 @@ func seed(mi *metainfo.MetaInfo, mbp *storage.MemoryBuf) (err error) {
 		return fmt.Errorf("AddTorrent: %w", err)
 	}
 	return
+}
+
+func seedFromTMPFS(mip *metainfo.MetaInfo) error {
+	// 1) create a client
+	// 2) add the MetaInfo to the client and return a torrent
+	// 3) when MetaInfo added, seeding starts
+
+	// client config
+	clientConfig := torrent.NewDefaultClientConfig()
+	clientConfig.Seed = true
+	clientConfig.Debug = *debugFlag
+
+	// client
+	cl, err := torrent.NewClient(clientConfig)
+	if err != nil {
+		return fmt.Errorf("new torrent client: %w", err)
+	}
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		cl.WriteStatus(w)
+	})
+	defer cl.Close()
+
+	// add torrent
+	t, err := cl.AddTorrent(mip)
+	if err != nil {
+		log.Printf("add torrent error: %v", err)
+		return err
+	}
+
+	// print the MetaInfo
+	mi := t.Metainfo()
+	log.Printf("Metainfo in torrent")
+	pprintMetainfo(&mi, pprintMetainfoFlags{
+		JustName:    false,
+		PieceHashes: false,
+		Files:       false,
+	})
+
+	info, err := mi.UnmarshalInfo()
+	log.Printf("info: %v", info.Describe())
+
+	path := fmt.Sprintf("./torrent/%s.torrent", info.BestName())
+	err = writeMetainfoToFile(mi, path)
+	if err != nil {
+		log.Printf("error writing %q: %v", path, err)
+		return err
+	} else {
+		log.Printf("wrote %q", path)
+	}
+
+	return nil
+
+	// // 1) get the Info which describes the filePath
+	// // 2) create a client
+	// // 3) add the Info to the client and return a torrent
+	// // 4) fullfill the tracker field of the torrent
+
+	// // Info
+	// info := metainfo.Info{}
+	// err = info.BuildFromFilePath(filePath)
+	// if err != nil {
+	// 	return err
+	// } else {
+	// 	log.Printf("build info from TMPFS file path: %v", info.Describe())
+	// }
+
+	// // MetaInfo, for getting Hash(Bytes(Info)), no other usage
+	// mi := metainfo.MetaInfo{
+	// 	InfoBytes: bencode.MustMarshal(info),
+	// }
+	// log.Printf("build info from TMPFS file path: %v", mi.Describe())
+	// ih := mi.HashInfoBytes()
+
+	// // client config
+	// log.Printf("start seeding")
+	// clientConfig := torrent.NewDefaultClientConfig()
+	// clientConfig.Seed = true
+	// clientConfig.Debug = *debugFlag
+
+	// // client
+	// cl, err := torrent.NewClient(clientConfig)
+	// if err != nil {
+	// 	return fmt.Errorf("new torrent client: %w", err)
+	// }
+	// defer cl.Close()
+
+	// // piece completion storage
+	// pc, err := storage.NewDefaultPieceCompletionForDir(".")
+	// if err != nil {
+	// 	return fmt.Errorf("new piece completion: %w", err)
+	// }
+	// defer pc.Close()
+
+	// // designate the dst path to be saved and the piece completion storage
+	// to, _ := cl.AddTorrentOpt(torrent.AddTorrentOpts{
+	// 	// identify a torrent
+	// 	InfoHash: ih,
+	// 	Storage: storage.NewFileOpts(storage.NewFileClientOpts{
+	// 		// 该torrent指定文件或目录的路径
+	// 		// 对于seeder, 是已存在文件的路径
+	// 		ClientBaseDir: filePath,
+	// 		FilePathMaker: func(opts storage.FilePathMakerOpts) string {
+	// 			return filepath.Join(opts.File.Path...)
+	// 		},
+	// 		TorrentDirMaker: nil,
+	// 		PieceCompletion: pc,
+	// 	}),
+	// 	InfoBytes: mi.InfoBytes,
+	// })
+	// defer to.Drop() // drop this torrent from the client torrent list after seeding
+
+	// // set the tracker field
+	// err = to.MergeSpec(&torrent.TorrentSpec{
+	// 	Trackers: Trackers,
+	// },
+	// )
+	// if err != nil {
+	// 	return fmt.Errorf("setting trackers: %w", err)
+	// } else {
+	// 	log.Print("set the tracker field ok")
+	// }
+
+	// // print the MetaInfo
+	// mi = to.Metainfo()
+	// pprintMetainfo(&mi, pprintMetainfoFlags{
+	// 	JustName:    false,
+	// 	PieceHashes: false,
+	// 	Files:       false,
+	// })
+
+	// // print the Info
+	// info, err = mi.UnmarshalInfo()
+	// log.Printf("info: %v",info.Describe())
+
+	// path := fmt.Sprintf("%s.torrent", info.BestName())
+	// err = writeMetainfoToFile(mi, path)
+	// if err == nil {
+	// 	log.Printf("wrote %q", path)
+	// } else {
+	// 	log.Printf("error writing %q: %v", path, err)
+	// }
+	// select {}
+}
+
+func writeMetainfoToFile(mi metainfo.MetaInfo, path string) error {
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0o640)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	err = mi.Write(f)
+	if err != nil {
+		return err
+	}
+	return f.Close()
 }
 
 func seed_another(byteData []byte, filePath string) error {

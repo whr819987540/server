@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"path"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -49,19 +50,53 @@ func handleSend(w http.ResponseWriter, r *http.Request) {
 	// 还没有生成.torrent
 	// create torrent from memory and seed
 	if mi == nil {
-		mi, err = fromMemory(data)
-		info, err := infoBytesToInfo(mi.InfoBytes)
-		if err != nil {
-			log.Printf("infoBytesToInfo: %v", err)
-		}
-		totalLength := info.TotalLength()
-		log.Printf("TotalLength %d\n", totalLength)
+		// memory, tmpfs, disk
+		method := strings.ToLower(configStruct.Storage.Method)
+		if method == "memory" {
+			mi, err = fromMemory(data)
+			info, err := infoBytesToInfo(mi.InfoBytes)
+			if err != nil {
+				log.Printf("infoBytesToInfo: %v", err)
+			}
+			totalLength := info.TotalLength()
+			log.Printf("TotalLength %d\n", totalLength)
 
-		mb := &storage.MemoryBuf{
-			Data:   data,
-			Length: totalLength,
+			mb := &storage.MemoryBuf{
+				Data:   data,
+				Length: totalLength,
+			}
+			seed(mi, mb)
+		} else if method == "tmpfs" {
+			modleParamPath := path.Join(configStruct.Model.ModelPath, configStruct.Model.ModelName)
+			mi, err = fromTMPFS(modleParamPath) // 修改全局变量mi
+			if err != nil {
+				log.Printf("fromTMPFSFilePath: %v", err)
+			}
+			log.Printf("build MetaInfo and set all the fields")
+			pprintMetainfo(mi, pprintMetainfoFlags{
+				JustName:    false,
+				PieceHashes: false,
+				Files:       false,
+			})
+
+			info, err := mi.UnmarshalInfo()
+			if err != nil {
+				log.Printf("metainfo UnmarshalInfo: %v", err)
+			} else {
+				log.Printf("info: %v", info.Describe())
+			}
+
+			err = seedFromTMPFS(mi)
+			if err != nil {
+				log.Printf("seedFromTMPFS: %v", err)
+			} else {
+				log.Printf("seedFromTMPFS ok")
+			}
+		} else if method == "disk" {
+
+		} else {
+
 		}
-		seed(mi, mb)
 	}
 
 	err = mi.Write(w)
@@ -153,11 +188,13 @@ func main() {
 
 	// 读取模型数据
 	modleParamPath := path.Join(configStruct.Model.ModelPath, configStruct.Model.ModelName)
+	log.Printf("modleParamPath %s", modleParamPath)
 	data, err = readModelParam(modleParamPath)
 	if err != nil {
 		log.Printf("read %s param error: %v", configStruct.Model.ModelName, err)
 	}
 	log.Printf("read %d bytes from model %s", len(data), configStruct.Model.ModelName)
 
+	// 启动
 	httpFunc()
 }
