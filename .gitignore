@@ -3,3 +3,7 @@
 server
 p2p-server.code-workspace
 .vscode
+.torrent.db
+.torrent.db-shm
+.torrent.db-wal
+torrent/
