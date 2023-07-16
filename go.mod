@@ -3,8 +3,6 @@ module main
 go 1.19
 
 require (
-	config v0.0.0-00010101000000-000000000000
-	constvalue v0.0.0-00010101000000-000000000000
 	github.com/anacrolix/log v0.13.2-0.20221123232138-02e2764801c3
 	github.com/anacrolix/torrent v1.50.0
 	github.com/bradfitz/iter v0.0.0-20191230175014-e8f45d346db8
@@ -76,7 +74,3 @@ require (
 )
 
 replace github.com/anacrolix/torrent => ../torrent
-
-replace constvalue => ../../constvalue
-
-replace config => ./config

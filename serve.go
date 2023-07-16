@@ -6,7 +6,6 @@ import (
 	"net/http"
 	// "io/ioutil"
 	// "net/http"
-	"constvalue"
 	"encoding/hex"
 	"encoding/json"
 	"os"
@@ -281,7 +280,7 @@ func seed_another(byteData []byte, filePath string) error {
 	log.Print(info.Pieces[:20])
 
 	if err != nil {
-		return fmt.Errorf("building info from memory %q: %w", constvalue.ModelName, err)
+		return fmt.Errorf("building info from memory: %w", err)
 	}
 	for _, fi := range info.Files {
 		log.Printf("added %q", fi.Path)

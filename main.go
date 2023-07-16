@@ -1,7 +1,6 @@
 package main
 
 import (
-	"config"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -13,6 +12,7 @@ import (
 	"time"
 
 	"github.com/anacrolix/log"
+	"github.com/anacrolix/torrent/config"
 	"github.com/anacrolix/torrent/metainfo"
 	"github.com/anacrolix/torrent/storage"
 )
