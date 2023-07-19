@@ -3,7 +3,6 @@ package main
 import (
 	// "bytes"
 	"fmt"
-	"net/http"
 	// "io/ioutil"
 	// "net/http"
 	"encoding/hex"
@@ -22,14 +21,14 @@ import (
 )
 
 var Trackers = [][]string{
-	{"udp://tracker.opentrackr.org:1337/announce"},
-	{"udp://tracker.openbittorrent.com:6969/announce"},
-	{"udp://tracker.moeking.me:6969/announce"},
-	{"udp://p4p.arenabg.com:1337/announce"},
-	{`wss://tracker.btorrent.xyz`},
-	{`wss://tracker.openwebtorrent.com`},
-	{"udp://tracker.opentrackr.org:1337/announce"},
-	{"udp://tracker.openbittorrent.com:6969/announce"},
+	// {"udp://tracker.opentrackr.org:1337/announce"},
+	// {"udp://tracker.openbittorrent.com:6969/announce"},
+	// {"udp://tracker.moeking.me:6969/announce"},
+	// {"udp://p4p.arenabg.com:1337/announce"},
+	// {`wss://tracker.btorrent.xyz`},
+	// {`wss://tracker.openwebtorrent.com`},
+	// {"udp://tracker.opentrackr.org:1337/announce"},
+	// {"udp://tracker.openbittorrent.com:6969/announce"},
 	{"udp://47.109.111.117:6969/annouce"}, // chihaya
 }
 
@@ -124,10 +123,6 @@ func seedFromTMPFS(mip *metainfo.MetaInfo) error {
 	if err != nil {
 		return fmt.Errorf("new torrent client: %w", err)
 	}
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		cl.WriteStatus(w)
-	})
-	defer cl.Close()
 
 	// add torrent
 	t, err := cl.AddTorrent(mip)
