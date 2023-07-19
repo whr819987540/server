@@ -117,6 +117,9 @@ func seedFromTMPFS(mip *metainfo.MetaInfo) error {
 	clientConfig := torrent.NewDefaultClientConfig()
 	clientConfig.Seed = true
 	clientConfig.Debug = *debugFlag
+	// 指定torrent data的存储路径
+	storageImplCloser := storage.NewFile(configStruct.Model.ModelPath)
+	clientConfig.DefaultStorage = storageImplCloser
 
 	// client
 	cl, err := torrent.NewClient(clientConfig)
