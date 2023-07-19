@@ -113,22 +113,22 @@ func seedFromTMPFS(mip *metainfo.MetaInfo) error {
 	// 2) add the MetaInfo to the client and return a torrent
 	// 3) when MetaInfo added, seeding starts
 
-	// client config
-	clientConfig := torrent.NewDefaultClientConfig()
-	clientConfig.Seed = true
-	clientConfig.Debug = *debugFlag
-	// 指定torrent data的存储路径
-	storageImplCloser := storage.NewFile(configStruct.Model.ModelPath)
-	clientConfig.DefaultStorage = storageImplCloser
+	// // client config
+	// clientConfig := torrent.NewDefaultClientConfig()
+	// clientConfig.Seed = true
+	// clientConfig.Debug = *debugFlag
+	// // 指定torrent data的存储路径
+	// storageImplCloser := storage.NewFile(configStruct.Model.ModelPath)
+	// clientConfig.DefaultStorage = storageImplCloser
 
-	// client
-	cl, err := torrent.NewClient(clientConfig)
-	if err != nil {
-		return fmt.Errorf("new torrent client: %w", err)
-	}
+	// // client
+	// cl, err := torrent.NewClient(clientConfig)
+	// if err != nil {
+	// 	return fmt.Errorf("new torrent client: %w", err)
+	// }
 
 	// add torrent
-	t, err := cl.AddTorrent(mip)
+	t, err := torrentClient.AddTorrent(mip)
 	if err != nil {
 		log.Printf("add torrent error: %v", err)
 		return err
