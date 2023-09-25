@@ -6,6 +6,8 @@ require (
 	github.com/anacrolix/log v0.13.2-0.20221123232138-02e2764801c3
 	github.com/anacrolix/torrent v1.50.0
 	github.com/bradfitz/iter v0.0.0-20191230175014-e8f45d346db8
+	github.com/davecgh/go-spew v1.1.1
+	github.com/dustin/go-humanize v1.0.0
 )
 
 require (
@@ -30,8 +32,6 @@ require (
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/benbjohnson/immutable v0.3.0 // indirect
 	github.com/bits-and-blooms/bitset v1.2.2 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/edsrzf/mmap-go v1.1.0 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
